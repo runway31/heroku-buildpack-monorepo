@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This is the **Heroku Monorepo Buildpack** — a Heroku buildpack that enables deploying multiple applications from a single monorepo. It copies a specified subdirectory (set via the `APP_BASE` environment variable) to the build root so that subsequent buildpacks treat it as the application.
+This is the **Heroku Monorepo Buildpack** — a Heroku buildpack that enables deploying multiple applications from a single monorepo. It stages the specified subdirectory (set via the `APP_BASE` environment variable), clears the build root, then moves the app into place so that subsequent buildpacks treat it as the application.
 
 Based on [heroku-buildpack-multi-procfile](https://github.com/heroku/heroku-buildpack-multi-procfile), but copies the entire app directory to root rather than just the Procfile.
 
@@ -30,9 +30,8 @@ Receives three arguments from Heroku: `BUILD_DIR`, `CACHE_DIR`, `ENV_DIR`.
 
 1. Reads `APP_BASE` from `${ENV_DIR}/APP_BASE` (fails if not set)
 2. Resolves symlinks in `${BUILD_DIR}/${APP_BASE}/` by moving each symlink's target into place (enables local dev symlinks like `engines -> ../../engines` while ensuring real content is in place on Heroku)
-3. Recursively copies `${BUILD_DIR}/${APP_BASE}/.` into `${BUILD_DIR}`
-4. Verifies the copy succeeded (exits 1 on failure)
-5. Lists the final build directory contents
+3. Stages the app directory to a temp dir, deletes everything in `BUILD_DIR`, then moves the app back into `BUILD_DIR`
+4. Verifies the operation succeeded (exits 1 on failure)
 
 ### bin/release
 Outputs `--- {}` — no additional release-phase processes.
@@ -69,5 +68,7 @@ Edit `bin/release`. Currently outputs empty YAML.
 
 ## Key Design Decisions
 
-- **Symlink resolution before copy**: Symlinks in the app subdirectory are resolved by moving their target content into place. This ensures local dev symlinks (e.g., `engines -> ../../engines`) become real files/directories before the app is copied to root.
+- **Stage, clean, move**: The app dir is moved to a temp staging directory, `BUILD_DIR` is wiped clean, then the app is moved back. This removes all other monorepo content from the slug, saving space.
+- **`shopt -s dotglob`**: Ensures dotfiles (`.env.example`, `.buildpacks`, etc.) are included in glob expansions during the move.
+- **Symlink resolution before staging**: Symlinks in the app subdirectory are resolved by moving their target content into place. This ensures local dev symlinks (e.g., `engines -> ../../engines`) become real files/directories before the app is staged.
 - **Always-match detection**: `bin/detect` always succeeds because the buildpack is explicitly added by users who need monorepo support — there's no file-based heuristic to detect.
