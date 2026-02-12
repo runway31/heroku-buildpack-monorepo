@@ -13,15 +13,17 @@ if [ ! -f "${ENV_DIR}/APP_BASE" ]; then
 fi
 APP_BASE="$(cat "${ENV_DIR}/APP_BASE")"
 
-# Remove symlinks from app dir that would conflict with existing root directories
+# Resolve symlinks in app dir by replacing them with their targets
 # This allows using symlinks locally (e.g., engines -> ../../engines) while
-# the real directory at root is used on Heroku
+# the real content is copied into place on Heroku
 for item in "${BUILD_DIR}/${APP_BASE}/"*; do
     if [ -L "$item" ]; then
         name=$(basename "$item")
-        if [ -e "${BUILD_DIR}/${name}" ]; then
-            echo "Removing symlink '$name' (using root directory instead)" | indent
+        target=$(readlink -f "$item")
+        if [ -e "$target" ]; then
+            echo "Resolving symlink '$name'" | indent
             rm "$item"
+            cp -r "$target" "$item"
         fi
     fi
 done
