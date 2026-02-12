@@ -15,7 +15,7 @@ APP_BASE="$(cat "${ENV_DIR}/APP_BASE")"
 
 # Resolve symlinks in app dir by replacing them with their targets
 # This allows using symlinks locally (e.g., engines -> ../../engines) while
-# the real content is copied into place on Heroku
+# the real content is moved into place on Heroku
 for item in "${BUILD_DIR}/${APP_BASE}/"*; do
     if [ -L "$item" ]; then
         name=$(basename "$item")
@@ -23,7 +23,7 @@ for item in "${BUILD_DIR}/${APP_BASE}/"*; do
         if [ -e "$target" ]; then
             echo "Resolving symlink '$name'" | indent
             rm "$item"
-            cp -r "$target" "$item"
+            mv "$target" "$item"
         fi
     fi
 done

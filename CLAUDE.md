@@ -29,7 +29,7 @@ Always returns success. Any app can use this buildpack.
 Receives three arguments from Heroku: `BUILD_DIR`, `CACHE_DIR`, `ENV_DIR`.
 
 1. Reads `APP_BASE` from `${ENV_DIR}/APP_BASE` (fails if not set)
-2. Resolves symlinks in `${BUILD_DIR}/${APP_BASE}/` by replacing each symlink with a copy of its target (enables local dev symlinks like `engines -> ../../engines` while ensuring real content is in place on Heroku)
+2. Resolves symlinks in `${BUILD_DIR}/${APP_BASE}/` by moving each symlink's target into place (enables local dev symlinks like `engines -> ../../engines` while ensuring real content is in place on Heroku)
 3. Recursively copies `${BUILD_DIR}/${APP_BASE}/.` into `${BUILD_DIR}`
 4. Verifies the copy succeeded (exits 1 on failure)
 5. Lists the final build directory contents
@@ -69,6 +69,5 @@ Edit `bin/release`. Currently outputs empty YAML.
 
 ## Key Design Decisions
 
-- **Symlink resolution before copy**: Symlinks in the app subdirectory are resolved by replacing them with a copy of their target content. This ensures local dev symlinks (e.g., `engines -> ../../engines`) become real files/directories before the app is copied to root.
-- **Copy instead of move**: Uses `cp -r` rather than `mv` because the build directory filesystem may be read-only for move operations, and the source files at root level may still be needed by subsequent buildpacks.
+- **Symlink resolution before copy**: Symlinks in the app subdirectory are resolved by moving their target content into place. This ensures local dev symlinks (e.g., `engines -> ../../engines`) become real files/directories before the app is copied to root.
 - **Always-match detection**: `bin/detect` always succeeds because the buildpack is explicitly added by users who need monorepo support — there's no file-based heuristic to detect.
